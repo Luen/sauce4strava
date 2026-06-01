@@ -75,11 +75,16 @@ Feature Highlights
 
 #### Development:
  1. Clone this repo to your local computer
- 2. Run `make`
+ 2. Run `make` (or `npm run build` on Windows without make)
  3. Go to chrome://extensions/ on your Chrome browser
  4. Make sure "Developer mode" is checked
  5. Click "Load unpacked extension..."
  6. Navigate to the directory  where you cloned or unzipped sauce and click "Open."
+
+On Windows, Git may check out `src/site/base.js` as a plain file containing `../common/base.js` instead of following the symlink. That breaks the extension in Chrome (`Unexpected token '.'` in base.js). `make` and `npm run build` materialize the real file automatically; you can also run `npm run materialize` after a fresh clone.
+
+#### Testing patron (paid) features locally:
+ Dev builds (`make`, not `make manifest-release`) are named **Sauce [DEV]**. In Sauce options, enable **Enable patron features for testing** to set `patronLevel` to 10 without Patreon. Reload Strava tabs afterward. This option is ignored on store/release builds. For production-like OAuth testing, use **Link to Patreon** instead.
 
 #### Mozilla Store QA Instructions:
  1. Get Linux machine with node, npm and make.

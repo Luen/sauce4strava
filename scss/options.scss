@@ -23,6 +23,10 @@ html:not([data-patron-level]) .patron {
     display: none;
 }
 
+.dev-only.hidden {
+    display: none;
+}
+
 body {
     margin: 0;
     display: flex;

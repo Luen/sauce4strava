@@ -1,167 +1,164 @@
 /* global browser, sauce */
 
-import "/src/ext/webext.js";
-import "/src/common/base.js";
-import "/src/common/base_init.js";
-import "/src/common/proxy.js";
-import "./proxy.js";
-import "/src/common/lib.js";
-import "/src/common/storage.js";
-import "./migrate.js";
-import "./menu.js";
+import '/src/ext/webext.js'
+import '/src/common/base.js'
+import '/src/common/base_init.js'
+import '/src/common/proxy.js'
+import './proxy.js'
+import '/src/common/lib.js'
+import '/src/common/storage.js'
+import './migrate.js'
+import './menu.js'
 
-import * as patron from './patron.mjs';
-import * as hist from './hist.mjs';
-import * as meta from './meta.mjs';
+import * as patron from './patron.mjs'
+import * as hist from './hist.mjs'
+import * as meta from './meta.mjs'
 
-patron.initProxyExports();
-meta.initProxyExports();
+patron.initProxyExports()
+meta.initProxyExports()
 
-let _starting = undefined;
-self.currentUser = null;
+let _starting = undefined
+self.currentUser = null
 
 // Enable some easier debugger interaction...
-self.meta = meta;
-self.hist = hist;
-
+self.meta = meta
+self.hist = hist
 
 async function start() {
-    await setStoragePersistent();
+    await setStoragePersistent()
     // Sadly 'onInstalled' callbacks are not reliable on Safari so we need
     // to try migrations every startup.
-    await sauce.migrate.runMigrations();
+    await sauce.migrate.runMigrations()
     sauce.storage.addListener((key, value) => {
         if (key === 'options') {
-            sauce.options = value;
+            sauce.options = value
+            patron.syncDevPatronFromOptions()
         }
-    });
-    const config = await sauce.storage.get(null);
-    sauce.options = config.options;
-    sauce.deviceId = config.deviceId;
-    self.currentUser = config.currentUser || null;
+    })
+    const config = await sauce.storage.get(null)
+    sauce.options = config.options
+    sauce.deviceId = config.deviceId
+    self.currentUser = config.currentUser || null
+    await patron.syncDevPatronFromOptions()
     // NOTE: currentUser might be stale if we are logged out but not aware of it yet.
-    await hist.startSyncManager(self.currentUser);
-    sauce.proxy.startBackgroundHandler();
+    await hist.startSyncManager(self.currentUser)
+    sauce.proxy.startBackgroundHandler()
     if (self.currentUser) {
         try {
-            meta.init({athleteId: self.currentUser});
-            await meta.load();
-        } catch(e) {
-            console.warn("Meta init failure (probably logged out):", e);
+            meta.init({ athleteId: self.currentUser })
+            await meta.load()
+        } catch (e) {
+            console.warn('Meta init failure (probably logged out):', e)
         }
     }
 }
-
 
 async function setStoragePersistent() {
     // This only works in some cases and may have no effect with unlimitedStorage
     // but it's evolving on all the browers and it's a good thing to ask for.
     if (navigator.storage && navigator.storage.persisted) {
-        const isPersisted = await navigator.storage.persisted();
+        const isPersisted = await navigator.storage.persisted()
         if (!isPersisted && navigator.storage.persist) {
-            await navigator.storage.persist();
+            await navigator.storage.persist()
         }
     }
 }
-
 
 // Make a suspend safe timeout.  Internally the clock for a site does not increment
 // during OS power save modes.  Timeouts spanning such a suspend event will eventually
 // run but without consideration for wall clock changes (i.e. they are late).
-const _timeoutsQ = [];
-const _timeoutsH = {};
-let wakeLoopId;
+const _timeoutsQ = []
+const _timeoutsH = {}
+let wakeLoopId
 
 function wakeLoop() {
-    const now = Date.now();
-    let i = _timeoutsQ.length;
+    const now = Date.now()
+    let i = _timeoutsQ.length
     while (i && _timeoutsQ[i - 1].ts < now) {
-        const entry = _timeoutsQ[--i];
+        const entry = _timeoutsQ[--i]
         if (!entry.complete && !entry.cleared) {
-            clearTimeout(entry.id);
-            setTimeout(entry.callback, 0, ...entry.args);
+            clearTimeout(entry.id)
+            setTimeout(entry.callback, 0, ...entry.args)
         }
-        delete _timeoutsH[entry.id];
+        delete _timeoutsH[entry.id]
     }
-    _timeoutsQ.length = i;
+    _timeoutsQ.length = i
     if (!i) {
-        clearInterval(wakeLoopId);
-        wakeLoopId = null;
+        clearInterval(wakeLoopId)
+        wakeLoopId = null
     }
 }
 
-
-sauce.suspendSafeSetTimeout = function(callback, ms, ...args) {
-    const entry = {ts: Date.now() + ms, callback, args};
+sauce.suspendSafeSetTimeout = function (callback, ms, ...args) {
+    const entry = { ts: Date.now() + ms, callback, args }
     entry.id = setTimeout(() => {
-        entry.complete = true;
-        callback(...args);
-    }, ms);
-    _timeoutsQ.push(entry);
-    _timeoutsQ.sort((a, b) => b.ts - a.ts);
-    _timeoutsH[entry.id] = entry;
+        entry.complete = true
+        callback(...args)
+    }, ms)
+    _timeoutsQ.push(entry)
+    _timeoutsQ.sort((a, b) => b.ts - a.ts)
+    _timeoutsH[entry.id] = entry
     if (wakeLoopId == null && (_timeoutsQ.length > 100 || ms > 1000)) {
-        wakeLoopId = setInterval(wakeLoop, 1000);
+        wakeLoopId = setInterval(wakeLoop, 1000)
     }
-    return entry.id;
-};
+    return entry.id
+}
 
-
-sauce.suspendSafeClearTimeout = function(id) {
-    const entry = _timeoutsH[id];
+sauce.suspendSafeClearTimeout = function (id) {
+    const entry = _timeoutsH[id]
     if (entry) {
-        entry.cleared = true;
+        entry.cleared = true
     }
-    clearTimeout(id);
-};
+    clearTimeout(id)
+}
 
-
-sauce.setWakeupAlarm = function(ms) {
+sauce.setWakeupAlarm = function (ms) {
     // This will reload the entire page if we were unloaded.
-    const when = Math.round(Date.now() + ms);
-    browser.alarms.create(`SetTimeoutBackup-${when}`, {when});
-};
+    const when = Math.round(Date.now() + ms)
+    browser.alarms.create(`SetTimeoutBackup-${when}`, { when })
+}
 
-
-sauce.suspendSafeSleep = function(ms) {
-    return new Promise(resolve => sauce.suspendSafeSetTimeout(resolve, ms));
-};
-
+sauce.suspendSafeSleep = function (ms) {
+    return new Promise((resolve) => sauce.suspendSafeSetTimeout(resolve, ms))
+}
 
 // Required for alarms API to actually wake us up.
 // Actual work commences without instigation.
-browser.alarms.onAlarm.addListener(() => undefined);
+browser.alarms.onAlarm.addListener(() => undefined)
 
-browser.runtime.onInstalled.addListener(async details => {
+browser.runtime.onInstalled.addListener(async (details) => {
     if (['install', 'update'].includes(details.reason) && !details.temporary) {
-        const version = browser.runtime.getManifest().version;
+        const version = browser.runtime.getManifest().version
         if (details.previousVersion && version !== details.previousVersion) {
-            const msg = `Sauce updated: ${details.previousVersion} -> ${version}`;
-            console.warn(msg);
-            await sauce.storage.set('recentUpdate', {previousVersion: details.previousVersion, version});
-            const athletes = await hist.getEnabledAthletes();
+            const msg = `Sauce updated: ${details.previousVersion} -> ${version}`
+            console.warn(msg)
+            await sauce.storage.set('recentUpdate', {
+                previousVersion: details.previousVersion,
+                version,
+            })
+            const athletes = await hist.getEnabledAthletes()
             for (const x of athletes) {
-                hist.syncLogsStore.write('warn', x.id, msg);
+                hist.syncLogsStore.write('warn', x.id, msg)
             }
         }
     }
-});
+})
 
-browser.runtime.onMessage.addListener(async msg => {
+browser.runtime.onMessage.addListener(async (msg) => {
     if (msg && msg.source === 'ext/boot') {
         if (msg.op === 'setCurrentUser') {
-            await _starting;
-            const id = msg.currentUser || null;
+            await _starting
+            const id = msg.currentUser || null
             if (id !== self.currentUser) {
-                self.currentUser = id;
-                await hist.restartSyncManager(id);
+                self.currentUser = id
+                await hist.restartSyncManager(id)
                 if (id) {
-                    meta.init({athleteId: id});
-                    await meta.load({forceFetch: true});
+                    meta.init({ athleteId: id })
+                    await meta.load({ forceFetch: true })
                 }
             }
         }
     }
-});
+})
 
-_starting = start();
+_starting = start()

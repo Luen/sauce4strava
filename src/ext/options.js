@@ -1,288 +1,319 @@
 /* global sauce, browser */
 
-(function() {
-    'use strict';
+;(function () {
+    'use strict'
 
-    const isSafari = sauce.isSafari();
-    const isPopup = (new URLSearchParams(window.location.search)).get('popup') !== null;
-    const supP = fetch('https://www.sauce.llc/supporters-v2.json').then(x => x.json());
+    const isSafari = sauce.isSafari()
+    const isPopup =
+        new URLSearchParams(window.location.search).get('popup') !== null
+    const supP = fetch('https://www.sauce.llc/supporters-v2.json').then((x) =>
+        x.json(),
+    )
     if (isPopup) {
-        document.documentElement.classList.add('popup');
+        document.documentElement.classList.add('popup')
     }
-
 
     function resetSuboptions(input) {
         if (!input.closest('.suboption')) {
-            for (const suboption of input.closest('.option').querySelectorAll('.suboption')) {
-                const disabled = typeof input.checked === 'boolean' ? !input.checked : !input.value;
-                suboption.classList.toggle('disabled', disabled);
-                suboption.querySelector('input').disabled = disabled;
+            for (const suboption of input
+                .closest('.option')
+                .querySelectorAll('.suboption')) {
+                const disabled =
+                    typeof input.checked === 'boolean'
+                        ? !input.checked
+                        : !input.value
+                suboption.classList.toggle('disabled', disabled)
+                suboption.querySelector('input').disabled = disabled
             }
         }
     }
 
-
     function manageOptions(options, patronLevel) {
-        const checkboxes = document.querySelectorAll('.option:not(.custom) input[type="checkbox"]');
+        const checkboxes = document.querySelectorAll(
+            '.option:not(.custom) input[type="checkbox"]',
+        )
         for (const input of checkboxes) {
-            input.checked = !!options[input.name];
+            input.checked = !!options[input.name]
             if (input.dataset.restriction) {
-                input.disabled = patronLevel < Number(input.dataset.restriction);
+                input.disabled = patronLevel < Number(input.dataset.restriction)
                 if (input.disabled && isSafari) {
-                    input.style.display = 'none';
+                    input.style.display = 'none'
                 }
             }
-            input.addEventListener('input', async ev => {
-                options[input.name] = input.checked;
-                resetSuboptions(input);
-                await sauce.storage.set('options', options);
+            input.addEventListener('input', async (ev) => {
+                options[input.name] = input.checked
+                resetSuboptions(input)
+                await sauce.storage.set('options', options)
                 if (isPopup && !input.classList.contains('no-reload')) {
-                    browser.tabs.reload();
+                    browser.tabs.reload()
                 }
-            });
-            resetSuboptions(input);
+            })
+            resetSuboptions(input)
         }
-        const radios = document.querySelectorAll('.option:not(.custom) input[type="radio"]');
+        const radios = document.querySelectorAll(
+            '.option:not(.custom) input[type="radio"]',
+        )
         for (const input of radios) {
-            input.checked = options[input.name] === input.value;
+            input.checked = options[input.name] === input.value
             if (input.dataset.restriction) {
-                input.disabled = patronLevel < Number(input.dataset.restriction);
+                input.disabled = patronLevel < Number(input.dataset.restriction)
                 if (input.disabled && isSafari) {
-                    input.style.display = 'none';
+                    input.style.display = 'none'
                 }
             }
-            input.addEventListener('input', async ev => {
-                options[input.name] = input.value;
-                await sauce.storage.set('options', options);
+            input.addEventListener('input', async (ev) => {
+                options[input.name] = input.value
+                await sauce.storage.set('options', options)
                 if (isPopup && !input.classList.contains('no-reload')) {
-                    browser.tabs.reload();
+                    browser.tabs.reload()
                 }
-            });
+            })
         }
-        const selects = document.querySelectorAll('.option:not(.custom) select');
+        const selects = document.querySelectorAll('.option:not(.custom) select')
         for (const select of selects) {
             if (select.dataset.restriction) {
-                select.disabled = patronLevel < Number(select.dataset.restriction);
+                select.disabled =
+                    patronLevel < Number(select.dataset.restriction)
                 if (select.disabled && isSafari) {
-                    select.style.display = 'none';
+                    select.style.display = 'none'
                 }
             }
             for (const o of select.options) {
-                o.selected = options[select.name] === o.value;
+                o.selected = options[select.name] === o.value
                 if (o.dataset.restriction) {
-                    o.disabled = patronLevel < Number(o.dataset.restriction);
+                    o.disabled = patronLevel < Number(o.dataset.restriction)
                     if (o.disabled && isSafari) {
-                        o.style.display = 'none';
+                        o.style.display = 'none'
                     }
                 }
             }
-            select.addEventListener('change', async ev => {
-                const value = Array.from(select.selectedOptions).map(x => x.value).join(',');
-                options[select.name] = value;
-                resetSuboptions(select);
-                await sauce.storage.set('options', options);
+            select.addEventListener('change', async (ev) => {
+                const value = Array.from(select.selectedOptions)
+                    .map((x) => x.value)
+                    .join(',')
+                options[select.name] = value
+                resetSuboptions(select)
+                await sauce.storage.set('options', options)
                 if (isPopup && !select.classList.contains('no-reload')) {
-                    browser.tabs.reload();
+                    browser.tabs.reload()
                 }
-            });
-            resetSuboptions(select);
+            })
+            resetSuboptions(select)
         }
-        const ranges = document.querySelectorAll('.option:not(.custom) input[type="range"]');
+        const ranges = document.querySelectorAll(
+            '.option:not(.custom) input[type="range"]',
+        )
         for (const input of ranges) {
             if (Object.prototype.hasOwnProperty.call(options, input.name)) {
-                input.value = options[input.name];
+                input.value = options[input.name]
             }
             if (input.dataset.restriction) {
-                input.disabled = patronLevel < Number(input.dataset.restriction);
+                input.disabled = patronLevel < Number(input.dataset.restriction)
                 if (input.disabled && isSafari) {
-                    input.style.display = 'none';
+                    input.style.display = 'none'
                 }
             }
-            let displayEl;
-            if (input.nextElementSibling && input.nextElementSibling.classList.contains('input-display')) {
-                displayEl = input.nextElementSibling;
-                const onInput = () => displayEl.textContent = +input.value ?
-                    `${input.value}${displayEl.dataset.suffix || ''}` :
-                    displayEl.dataset.placeholder;
-                input.addEventListener('input', onInput);
-                onInput();
+            let displayEl
+            if (
+                input.nextElementSibling &&
+                input.nextElementSibling.classList.contains('input-display')
+            ) {
+                displayEl = input.nextElementSibling
+                const onInput = () =>
+                    (displayEl.textContent = +input.value
+                        ? `${input.value}${displayEl.dataset.suffix || ''}`
+                        : displayEl.dataset.placeholder)
+                input.addEventListener('input', onInput)
+                onInput()
             }
-            input.addEventListener('change', async ev => {
-                options[input.name] = +input.value;
-                resetSuboptions(input);
-                await sauce.storage.set('options', options);
+            input.addEventListener('change', async (ev) => {
+                options[input.name] = +input.value
+                resetSuboptions(input)
+                await sauce.storage.set('options', options)
                 if (isPopup && !input.classList.contains('no-reload')) {
-                    browser.tabs.reload();
+                    browser.tabs.reload()
                 }
-            });
-            resetSuboptions(input);
+            })
+            resetSuboptions(input)
         }
     }
-
 
     function renderActivityFilters(table, options) {
-        const tbody = table.querySelector('tbody');
-        const filters = options['activity-filters'] = (options['activity-filters'] || []);
-        tbody.textContent = '';
+        const tbody = table.querySelector('tbody')
+        const filters = (options['activity-filters'] =
+            options['activity-filters'] || [])
+        tbody.textContent = ''
         if (!filters || !filters.length) {
             sauce.adjacentNodeContents(
-                tbody, 'afterbegin',
-                `<tr><td colspan="4"><i>No activity filters are configured</i></td></tr>`);
+                tbody,
+                'afterbegin',
+                `<tr><td colspan="4"><i>No activity filters are configured</i></td></tr>`,
+            )
         } else {
             for (const [i, filter] of filters.entries()) {
-                const row = document.createElement('tr');
+                const row = document.createElement('tr')
                 for (const key of ['type', 'criteria', 'action']) {
-                    const q = `[data-filter-property="${key}"] option[value="${filter[key]}"]`;
-                    const option = table.querySelector(q);
-                    const label = option ? option.textContent : `invalid(${filter[key]})`;
-                    const td = document.createElement('td');
-                    td.classList.add(key);
-                    td.textContent = label;
-                    row.append(td);
+                    const q = `[data-filter-property="${key}"] option[value="${filter[key]}"]`
+                    const option = table.querySelector(q)
+                    const label = option
+                        ? option.textContent
+                        : `invalid(${filter[key]})`
+                    const td = document.createElement('td')
+                    td.classList.add(key)
+                    td.textContent = label
+                    row.append(td)
                 }
-                const delTd = document.createElement('td');
-                delTd.classList.add('op');
-                const btn = document.createElement('button');
-                btn.classList.add('button', 'delete');
-                btn.textContent = '🗙';
-                btn.title = 'Delete filter';
-                btn.addEventListener('click', ev => {
-                    ev.preventDefault();
-                    filters.splice(i, 1);
-                    sauce.storage.set('options', options); // bg okay
-                    renderActivityFilters(table, options);
-                });
-                delTd.append(btn);
-                row.append(delTd);
-                tbody.append(row);
+                const delTd = document.createElement('td')
+                delTd.classList.add('op')
+                const btn = document.createElement('button')
+                btn.classList.add('button', 'delete')
+                btn.textContent = '🗙'
+                btn.title = 'Delete filter'
+                btn.addEventListener('click', (ev) => {
+                    ev.preventDefault()
+                    filters.splice(i, 1)
+                    sauce.storage.set('options', options) // bg okay
+                    renderActivityFilters(table, options)
+                })
+                delTd.append(btn)
+                row.append(delTd)
+                tbody.append(row)
             }
         }
     }
-
 
     function manageCustomOptions(options) {
-        const actFilters = document.querySelector('table.activity-filters');
-        const addBtn = actFilters.querySelector('button.add-entry');
-        const filters = options['activity-filters'] = (options['activity-filters'] || []);
-        addBtn.addEventListener('click', ev => {
-            const filter = {};
+        const actFilters = document.querySelector('table.activity-filters')
+        const addBtn = actFilters.querySelector('button.add-entry')
+        const filters = (options['activity-filters'] =
+            options['activity-filters'] || [])
+        addBtn.addEventListener('click', (ev) => {
+            const filter = {}
             for (const x of actFilters.querySelectorAll('select')) {
-                filter[x.dataset.filterProperty] = x.value;
+                filter[x.dataset.filterProperty] = x.value
             }
-            filters.push(filter);
-            sauce.storage.set('options', options); // bg okay
-            renderActivityFilters(actFilters, options);
-        });
-        const unset = new Set(['type', 'action']);
-        let editing;
+            filters.push(filter)
+            sauce.storage.set('options', options) // bg okay
+            renderActivityFilters(actFilters, options)
+        })
+        const unset = new Set(['type', 'action'])
+        let editing
         for (const anchor of actFilters.querySelectorAll('a.select-toggle')) {
-            anchor.addEventListener('click', ev => {
-                ev.preventDefault();
-                const td = anchor.closest('td');
-                td.classList.add('editing');
+            anchor.addEventListener('click', (ev) => {
+                ev.preventDefault()
+                const td = anchor.closest('td')
+                td.classList.add('editing')
                 if (editing) {
-                    editing.classList.remove('editing');
+                    editing.classList.remove('editing')
                 }
-                editing = td;
-                unset.delete(td.querySelector('select').dataset.filterProperty);
+                editing = td
+                unset.delete(td.querySelector('select').dataset.filterProperty)
                 if (!unset.size) {
-                    addBtn.classList.remove('disabled');
+                    addBtn.classList.remove('disabled')
                 }
-            });
+            })
         }
         for (const select of actFilters.querySelectorAll('select')) {
-            const handle = ev => {
-                const td = select.closest('td');
-                td.classList.remove('editing');
+            const handle = (ev) => {
+                const td = select.closest('td')
+                td.classList.remove('editing')
                 if (editing === td) {
-                    editing = null;
+                    editing = null
                 }
-                td.querySelector('a.select-toggle').textContent = select.options[select.selectedIndex].text;
-            };
-            select.addEventListener('change', handle);
-            select.addEventListener('blur', handle);
+                td.querySelector('a.select-toggle').textContent =
+                    select.options[select.selectedIndex].text
+            }
+            select.addEventListener('change', handle)
+            select.addEventListener('blur', handle)
         }
-        renderActivityFilters(actFilters, options);
+        renderActivityFilters(actFilters, options)
     }
-
 
     async function getBuildInfo() {
-        const resp = await fetch('/build.json');
-        return await resp.json();
+        const resp = await fetch('/build.json')
+        return await resp.json()
     }
 
-
     async function main() {
-        const supporters = await supP;
-        const supporter = supporters[Math.floor(Math.random() * supporters.length)];
-        const supEl = document.querySelector('p.supporter a');
+        const supporters = await supP
+        const supporter =
+            supporters[Math.floor(Math.random() * supporters.length)]
+        const supEl = document.querySelector('p.supporter a')
         if (supEl) {
-            supEl.textContent = supporter.name;
+            supEl.textContent = supporter.name
         }
         document.querySelector('a.dismiss').addEventListener('click', () => {
-            browser.tabs.update({active: true});  // required to allow self.close()
-            self.close();
-        });
-        const detailsEl = document.querySelector('#details > tbody');
-        const type = browser.runtime.getURL('').split(':')[0];
-        const doc = document.documentElement;
-        doc.classList.add(type);
+            browser.tabs.update({ active: true }) // required to allow self.close()
+            self.close()
+        })
+        const detailsEl = document.querySelector('#details > tbody')
+        const type = browser.runtime.getURL('').split(':')[0]
+        const doc = document.documentElement
+        doc.classList.add(type)
         if (sauce.isEdge()) {
-            doc.classList.add('edge');
+            doc.classList.add('edge')
         }
-        const config = await sauce.storage.get();
-        const manifest = browser.runtime.getManifest();
-        const build = await getBuildInfo();
-        const commit = build.git_commit.slice(0, 10);
+        const config = await sauce.storage.get()
+        const manifest = browser.runtime.getManifest()
+        if (/\[DEV\]/i.test(manifest.short_name || manifest.name || '')) {
+            for (const el of document.querySelectorAll('.dev-only')) {
+                el.classList.remove('hidden')
+            }
+        }
+        const build = await getBuildInfo()
+        const commit = build.git_commit.slice(0, 10)
         const details = [
-            ['Version', `${manifest.version_name || manifest.version} (${commit})`],
-        ];
-        const patronLink = document.createElement('a');
-        patronLink.href = "https://www.sauce.llc/patreon-oauth";
-        patronLink.target = "_blank";
+            [
+                'Version',
+                `${manifest.version_name || manifest.version} (${commit})`,
+            ],
+        ]
+        const patronLink = document.createElement('a')
+        patronLink.href = 'https://www.sauce.llc/patreon-oauth'
+        patronLink.target = '_blank'
         if (config.patronLevel) {
             // There is going to be small window where names are not available
-            let levelName;
+            let levelName
             if (config.patronLevelNames) {
                 for (const x of config.patronLevelNames) {
                     if (x.level <= config.patronLevel) {
-                        levelName = x.name;
-                        break;
+                        levelName = x.name
+                        break
                     }
                 }
             }
-            const span = document.createElement('span');
-            span.textContent = (levelName || config.patronLevel) + ' ';
+            const span = document.createElement('span')
+            span.textContent = (levelName || config.patronLevel) + ' '
             if (!config.patronLegacy) {
-                patronLink.textContent = '(Relink to Patreon)';
+                patronLink.textContent = '(Relink to Patreon)'
             }
-            span.appendChild(patronLink);
-            details.push(['Patron Level', span]);
-            document.documentElement.dataset.patronLevel = config.patronLevel;
+            span.appendChild(patronLink)
+            details.push(['Patron Level', span])
+            document.documentElement.dataset.patronLevel = config.patronLevel
         } else if (!isSafari) {
-            patronLink.textContent = 'Link to Patreon';
-            details.push(['For new patrons', patronLink]);
+            patronLink.textContent = 'Link to Patreon'
+            details.push(['For new patrons', patronLink])
         }
         for (const [key, value] of details) {
-            const tdKey = document.createElement('td');
-            tdKey.classList.add('key');
-            tdKey.textContent = key;
-            const tdVal = document.createElement('td');
-            tdVal.classList.add('value');
+            const tdKey = document.createElement('td')
+            tdKey.classList.add('key')
+            tdKey.textContent = key
+            const tdVal = document.createElement('td')
+            tdVal.classList.add('value')
             if (value instanceof Element) {
-                tdVal.appendChild(value);
+                tdVal.appendChild(value)
             } else {
-                tdVal.textContent = value;
+                tdVal.textContent = value
             }
-            const tr = document.createElement('tr');
-            tr.appendChild(tdKey);
-            tr.appendChild(tdVal);
-            detailsEl.appendChild(tr);
+            const tr = document.createElement('tr')
+            tr.appendChild(tdKey)
+            tr.appendChild(tdVal)
+            detailsEl.appendChild(tr)
         }
-        config.options = config.options || {};
-        manageOptions(config.options, config.patronLevel);
-        manageCustomOptions(config.options);
+        config.options = config.options || {}
+        manageOptions(config.options, config.patronLevel)
+        manageCustomOptions(config.options)
     }
 
-    document.addEventListener('DOMContentLoaded', main);
-})();
+    document.addEventListener('DOMContentLoaded', main)
+})()

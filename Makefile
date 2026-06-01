@@ -34,6 +34,9 @@ sass:
 	cp -a scss/fonts css/
 
 deps:
+	@if [ -f src/site/base.js ] && [ "$$(cat src/site/base.js)" = "../common/base.js" ]; then \
+		cp src/common/base.js src/site/base.js; \
+	fi
 	rm -rf src/common/jscoop src/common/jsfit src/site/saucecharts css/saucecharts
 	cp -r $(NODE_MODULES)/jscoop/src src/common/jscoop
 	cp -r $(NODE_MODULES)/jsfit/src src/common/jsfit
