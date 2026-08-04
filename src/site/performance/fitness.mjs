@@ -167,7 +167,12 @@ export class TrainingChartView extends charts.ActivityTimeRangeChartView {
             let tssPred = last.ctl;
             for (const [i, date] of Array.from(D.dayRange(fStart, fEnd)).entries()) {
                 tssPred *= 1 + (tssSlope * (1 / (i * decay + 1)));
-                predictions.push({ts: +date, tssOverride: tssPred});
+                predictions.push({
+                    athlete: this.athlete.id,
+                    description: 'Prediction based on recent ATL to CTL ratios',
+                    ts: +date,
+                    tssOverride: tssPred
+                });
             }
             future = data.activitiesByDay(predictions, fStart, fEnd, last.atl, last.ctl);
         }

@@ -1186,7 +1186,7 @@ export class DetailsView extends PerfView {
             return;
         }
         const oldest = this.activities[0];
-        const more = await sauce.hist.getActivitySiblings(oldest.id, {direction: 'prev', limit: 1});
+        const more = await sauce.hist.getActivitySiblings(oldest, {direction: 'prev', limit: 1});
         await this.setActivities(this.activities.concat(more), {noHighlight: true});
     }
 
@@ -1195,7 +1195,7 @@ export class DetailsView extends PerfView {
             return;
         }
         const newest = this.activities[this.activities.length - 1];
-        const more = await sauce.hist.getActivitySiblings(newest.id, {direction: 'next', limit: 1});
+        const more = await sauce.hist.getActivitySiblings(newest, {direction: 'next', limit: 1});
         await this.setActivities(this.activities.concat(more), {noHighlight: true});
     }
 
